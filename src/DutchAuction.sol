@@ -11,12 +11,12 @@ contract DutchAuction {
     error DutchAuction__CallerIsNotSeller();
     error DutchAuction__GoodIsSold();
 
-    address public seller;
+    address public immutable seller;
     string public description;
-    uint256 public startingPrice;
-    uint256 public discountRate;
-    uint256 public timestamp;
-    uint256 public duration;
+    uint256 public immutable startingPrice;
+    uint256 public immutable discountRate;
+    uint256 public immutable timestamp;
+    uint256 public immutable duration;
     uint256 public sellerBalance;
     bool public isActive = false;
     bool public isSold = false;

@@ -6,11 +6,10 @@ import {DutchAuction} from "./DutchAuction.sol";
 contract AuctionFactory {
     error AuctionFactory__NonOwnerCanNotWithdraw();
     error AuctionFactory__SendProperFees();
-    error AuctionFactory__SetProperPrice();
     error AuctionFactory__TransactionFailed();
     error AuctionFactory__NotOwner();
 
-    address private owner;
+    address public owner;
     uint256 public constant FEES = 0.15 ether;
     uint256 public count = 0;
     mapping(uint256 id => DutchAuction auction) public auctions;
@@ -23,18 +22,17 @@ contract AuctionFactory {
     function startAuction(string memory _description, uint256 _price, uint256 _discountRate, uint256 _duration)
         external
         payable
+        returns (DutchAuction)
     {
         if (msg.value != FEES) {
             revert AuctionFactory__SendProperFees();
-        }
-        if (_price < _discountRate * _duration) {
-            revert AuctionFactory__SetProperPrice();
         }
         DutchAuction auction = new DutchAuction(msg.sender, _description, _price, _discountRate, _duration);
 
         auctions[count] = auction;
         sellerToAuction[msg.sender] = count;
         count += 1;
+        return auction;
     }
 
     function withdraw() external {
