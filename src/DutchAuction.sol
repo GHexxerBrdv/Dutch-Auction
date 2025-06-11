@@ -21,11 +21,17 @@ contract DutchAuction {
     bool public isActive = false;
     bool public isSold = false;
 
-    constructor(address _seller, string memory _description, uint256 _price, uint256 _discountRate, uint256 _duration) {
+    constructor(
+        address _seller,
+        string memory _description,
+        uint256 _price,
+        uint256 _discountRateInBP,
+        uint256 _duration
+    ) {
         seller = _seller;
         description = _description;
         startingPrice = _price;
-        discountRate = _discountRate;
+        discountRate = (_discountRateInBP * 1e18) / 10000;
         timestamp = block.timestamp;
         duration = timestamp + (_duration * 1 days);
         isActive = true;
@@ -42,7 +48,11 @@ contract DutchAuction {
             revert DutchAuction__AuctionIsNotActive();
         }
         uint256 timeElapsed = block.timestamp - timestamp;
-        uint256 discount = discountRate * timeElapsed;
+        uint256 dayPassed = timeElapsed / 1 days;
+        uint256 discount = discountRate * dayPassed;
+        if (discount >= startingPrice) {
+            return 0;
+        }
         return startingPrice - discount;
     }
 
