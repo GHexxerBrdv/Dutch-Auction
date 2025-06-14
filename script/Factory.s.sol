@@ -8,7 +8,7 @@ contract deployFactory is Script {
     AuctionFactory factory;
 
     function run() external returns (AuctionFactory) {
-        vm.startBroadcast();
+        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
         factory = new AuctionFactory();
         vm.stopBroadcast();
         return factory;
