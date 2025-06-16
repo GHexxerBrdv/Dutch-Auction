@@ -27,21 +27,22 @@ contract FactoryTest is Test {
         vm.deal(seller, 1 ether);
 
         vm.startPrank(seller);
-        DutchAuction auction = factory.startAuction{value: factory.FEES()}("dell laptop", 2 ether, 20, 10);
+        DutchAuction auction = factory.startAuction{value: factory.FEES()}("dell laptop", 2 ether, 20, 10, 1 ether);
         vm.stopPrank();
 
         assertEq(address(factory.auctions(factory.count() - 1)), address(auction));
-        assertEq(factory.sellerToAuction(seller), factory.count() - 1);
+        assertEq(factory.sellerToAuction(seller, 0), 0);
         assertEq(factory.count(), 1);
 
         console2.log("auction address: ", address(auction));
-        assertEq(auction.seller(), seller);
-        assertEq(auction.description(), "dell laptop");
-        console2.log("the starting price of auction is:", auction.startingPrice());
+        assertEq(auction.getSeller(), seller);
+        assertEq(auction.getDescription(), "dell laptop");
+        console2.log("the starting price of auction is:", auction.getStartingPrice());
         // assertEq(auction.discountRate(), 20);
-        assertEq(auction.duration(), auction.timestamp() + 10 days);
-        assertTrue(auction.isActive());
-        assertFalse(auction.isSold());
+        assertEq(auction.getDuration(), auction.timestamp() + 10 days);
+        (bool isActive, bool isSold) = auction.getStatus();
+        assertTrue(isActive);
+        assertFalse(isSold);
         assertEq(auction.sellerBalance(), 0);
 
         assertEq(address(factory).balance, 0.15 ether);
@@ -53,7 +54,7 @@ contract FactoryTest is Test {
 
         vm.startPrank(seller);
         vm.expectRevert();
-        factory.startAuction{value: 1}("dell laptop", 2 ether, 20, 10);
+        factory.startAuction{value: 1}("dell laptop", 2 ether, 20, 10, 1 ether);
         vm.stopPrank();
     }
 
@@ -62,7 +63,7 @@ contract FactoryTest is Test {
         vm.deal(seller, 1 ether);
 
         vm.startPrank(seller);
-        factory.startAuction{value: factory.FEES()}("dell laptop", 2 ether, 20, 10);
+        factory.startAuction{value: factory.FEES()}("dell laptop", 2 ether, 20, 10, 1 ether);
         vm.stopPrank();
 
         assertEq(address(factory).balance, 0.15 ether);
@@ -79,7 +80,7 @@ contract FactoryTest is Test {
         vm.deal(seller, 1 ether);
 
         vm.startPrank(seller);
-        factory.startAuction{value: factory.FEES()}("dell laptop", 2 ether, 20, 10);
+        factory.startAuction{value: factory.FEES()}("dell laptop", 2 ether, 20, 10, 1 ether);
         vm.stopPrank();
 
         assertEq(address(factory).balance, 0.15 ether);
@@ -96,7 +97,7 @@ contract FactoryTest is Test {
         vm.deal(seller, 1 ether);
 
         vm.startPrank(seller);
-        DutchAuction auction = factory.startAuction{value: factory.FEES()}("dell laptop", 2 ether, 20, 10);
+        DutchAuction auction = factory.startAuction{value: factory.FEES()}("dell laptop", 2 ether, 20, 10, 1 ether);
         vm.stopPrank();
 
         address buyer = makeAddr("buyer");
@@ -105,20 +106,21 @@ contract FactoryTest is Test {
         vm.warp(auction.timestamp() + 6 days);
         vm.prank(buyer);
         auction.buyGood{value: 2 ether}();
-
-        assertEq(auction.isSold(), true);
+        (bool isActive, bool isSold) = auction.getStatus();
+        assertEq(isSold, true);
 
         vm.prank(seller);
         auction.withdraw();
 
+        (isActive,) = auction.getStatus();
         assertGt(seller.balance, 1 ether);
-        assertEq(auction.isActive(), false);
+        assertEq(isActive, false);
 
         vm.prank(owner);
-        factory.cleanUp();
+        factory.cleanUp(0);
 
         assertEq(address(factory.auctions(factory.count() - 1)), address(0));
-        assertEq(factory.sellerToAuction(seller), 0);
+        assertEq(factory.sellerToAuction(seller, 0), 0);
     }
 
     function test_NonOwnerCleanUp() public {
@@ -126,7 +128,7 @@ contract FactoryTest is Test {
         vm.deal(seller, 1 ether);
 
         vm.startPrank(seller);
-        DutchAuction auction = factory.startAuction{value: factory.FEES()}("dell laptop", 2 ether, 20, 10);
+        DutchAuction auction = factory.startAuction{value: factory.FEES()}("dell laptop", 2 ether, 20, 10, 1 ether);
         vm.stopPrank();
 
         address buyer = makeAddr("buyer");
@@ -136,16 +138,20 @@ contract FactoryTest is Test {
         vm.prank(buyer);
         auction.buyGood{value: 2 ether}();
 
-        assertEq(auction.isSold(), true);
+        (bool isActive, bool isSold) = auction.getStatus();
+
+        assertEq(isSold, true);
 
         vm.prank(seller);
         auction.withdraw();
 
+        (isActive,) = auction.getStatus();
+
         assertGt(seller.balance, 1 ether);
-        assertEq(auction.isActive(), false);
+        assertEq(isActive, false);
 
         vm.prank(seller);
         vm.expectRevert();
-        factory.cleanUp();
+        factory.cleanUp(0);
     }
 }

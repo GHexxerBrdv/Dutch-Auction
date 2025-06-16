@@ -13,24 +13,28 @@ contract AuctionFactory {
     uint256 public constant FEES = 0.15 ether;
     uint256 public count = 0;
     mapping(uint256 id => DutchAuction auction) public auctions;
-    mapping(address seller => uint256 id) public sellerToAuction;
+    mapping(address seller => uint256[] id) public sellerToAuction;
 
+    // mapping(uint256 id => address seller) public idToSeller;
     constructor() {
         owner = msg.sender;
     }
 
-    function startAuction(string memory _description, uint256 _price, uint256 _discountRate, uint256 _duration)
-        external
-        payable
-        returns (DutchAuction)
-    {
+    function startAuction(
+        string memory _description,
+        uint256 _price,
+        uint256 _discountRate,
+        uint256 _duration,
+        uint256 _threshold
+    ) external payable returns (DutchAuction) {
         if (msg.value != FEES) {
             revert AuctionFactory__SendProperFees();
         }
-        DutchAuction auction = new DutchAuction(msg.sender, _description, _price, _discountRate, _duration);
+        DutchAuction auction = new DutchAuction(msg.sender, _description, _price, _discountRate, _duration, _threshold);
 
         auctions[count] = auction;
-        sellerToAuction[msg.sender] = count;
+        sellerToAuction[msg.sender].push(count);
+        // idToSeller[count] = msg.sender;
         count += 1;
         return auction;
     }
@@ -46,19 +50,16 @@ contract AuctionFactory {
         }
     }
 
-    function cleanUp() external {
+    function cleanUp(uint256 id) external {
         if (msg.sender != owner) {
             revert AuctionFactory__NotOwner();
         }
-        uint256 length = count;
 
-        for (uint256 i = 0; i < length; i++) {
-            DutchAuction auction = auctions[i];
-            address seller = auction.seller();
-            if (!auction.isActive()) {
-                delete auctions[i];
-                delete sellerToAuction[seller];
-            }
+        DutchAuction auction = auctions[id];
+        address seller = auction.getSeller();
+        (bool isActive,) = auction.getStatus();
+        if (!isActive) {
+            delete auctions[id];
         }
     }
 }

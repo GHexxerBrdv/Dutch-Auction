@@ -4,6 +4,7 @@ pragma solidity 0.8.24;
 /*
  This dutch auction allows user to sell their goods with desired price, the price will gose down by the time pass by defined discountRate set by seller.
 */
+
 contract DutchAuction {
     error DutchAuction__AuctionIsNotActive();
     error DutchAuction__SendEnoughMoney();
@@ -11,22 +12,47 @@ contract DutchAuction {
     error DutchAuction__CallerIsNotSeller();
     error DutchAuction__GoodIsSold();
 
-    address public immutable seller;
-    string public description;
-    uint256 public immutable startingPrice;
-    uint256 public immutable discountRate;
+    address private immutable seller;
+    string private description;
+    uint256 private immutable startingPrice;
+    uint256 private immutable discountRate;
     uint256 public immutable timestamp;
-    uint256 public immutable duration;
+    uint256 private immutable duration;
     uint256 public sellerBalance;
-    bool public isActive = false;
-    bool public isSold = false;
+    uint256 public threshold;
+    bool private isActive;
+    bool private isSold;
+    bool private lock;
+
+    modifier auctionStatus() {
+        if (isSold) {
+            revert DutchAuction__GoodIsSold();
+        }
+
+        if (block.timestamp > duration) {
+            revert DutchAuction__AuctionIsNotActive();
+        }
+
+        if (!isActive) {
+            revert DutchAuction__AuctionIsNotActive();
+        }
+        _;
+    }
+
+    modifier locked() {
+        require(!lock, "Reentrancy detected");
+        lock = true;
+        _;
+        lock = false;
+    }
 
     constructor(
         address _seller,
         string memory _description,
         uint256 _price,
         uint256 _discountRateInBP,
-        uint256 _duration
+        uint256 _duration,
+        uint256 _threshold
     ) {
         seller = _seller;
         description = _description;
@@ -35,51 +61,39 @@ contract DutchAuction {
         timestamp = block.timestamp;
         duration = timestamp + (_duration * 1 days);
         isActive = true;
+        threshold = _threshold;
     }
 
-    function getPrice() public view returns (uint256) {
-        if (isSold) {
-            revert DutchAuction__GoodIsSold();
-        }
-        if (!isActive) {
-            revert DutchAuction__AuctionIsNotActive();
-        }
-        if (block.timestamp > duration) {
-            revert DutchAuction__AuctionIsNotActive();
-        }
+    function getPrice() public view auctionStatus returns (uint256) {
         uint256 timeElapsed = block.timestamp - timestamp;
         uint256 dayPassed = timeElapsed / 1 days;
         uint256 discount = discountRate * dayPassed;
         if (discount >= startingPrice) {
-            return 0;
+            return threshold;
+        }
+
+        if (startingPrice - discount < threshold) {
+            return threshold;
         }
         return startingPrice - discount;
     }
 
-    function buyGood() external payable {
-        if (!isActive) {
-            revert DutchAuction__AuctionIsNotActive();
-        }
-        if (block.timestamp > duration) {
-            revert DutchAuction__AuctionIsNotActive();
-        }
-
-        if (isSold) {
-            revert DutchAuction__GoodIsSold();
-        }
-
+    function buyGood() external payable auctionStatus locked {
         uint256 goodPrice = getPrice();
         if (msg.value < goodPrice) {
             revert DutchAuction__SendEnoughMoney();
         }
         isSold = true;
-        uint256 refund = msg.value - goodPrice;
-        if (refund > 0) {
-            (bool ok,) = payable(msg.sender).call{value: refund}("");
-            if (!ok) {
-                revert DutchAuction__TransactionFailed();
-            }
-        }
+        /**
+         * @notice removed refund functionalities due to security consideration.
+         */
+        // uint256 refund = msg.value - goodPrice;
+        // if (refund > 0) {
+        //     (bool ok,) = payable(msg.sender).call{value: refund}("");
+        //     if (!ok) {
+        //         revert DutchAuction__TransactionFailed();
+        //     }
+        // }
 
         sellerBalance = goodPrice;
     }
@@ -96,5 +110,29 @@ contract DutchAuction {
         if (!ok) {
             revert DutchAuction__TransactionFailed();
         }
+    }
+
+    function getSeller() external view returns (address) {
+        return seller;
+    }
+
+    function getDuration() external view returns (uint256) {
+        return duration;
+    }
+
+    function getDescription() external view returns (string memory) {
+        return description;
+    }
+
+    function getStartingPrice() external view returns (uint256) {
+        return startingPrice;
+    }
+
+    function getDiscountRate() external view returns (uint256) {
+        return discountRate;
+    }
+
+    function getStatus() external view returns (bool, bool) {
+        return (isActive, isSold);
     }
 }
