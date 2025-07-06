@@ -61,6 +61,8 @@ PRIVATE_KEY=0x(metamask private key)
 RPC_URL="public-node.testnet.rsk.co"
 ```
 
+run the following command to use .env veriables in your terminal.
+
 ```bash
 source .env
 ```
