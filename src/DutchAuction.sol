@@ -84,17 +84,6 @@ contract DutchAuction {
             revert DutchAuction__SendEnoughMoney();
         }
         isSold = true;
-        /**
-         * @notice removed refund functionalities due to security consideration.
-         */
-        // uint256 refund = msg.value - goodPrice;
-        // if (refund > 0) {
-        //     (bool ok,) = payable(msg.sender).call{value: refund}("");
-        //     if (!ok) {
-        //         revert DutchAuction__TransactionFailed();
-        //     }
-        // }
-
         sellerBalance = goodPrice;
     }
 

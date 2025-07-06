@@ -19,7 +19,6 @@ contract DutchAuctionTest is Test {
         assertEq(auction.getSeller(), seller);
         assertEq(auction.getDescription(), "Buy Hoodie");
         console2.log("the starting price of auction is:", auction.getStartingPrice());
-        // assertEq(auction.discountRate(), 20);
         assertEq(auction.getDuration(), auction.timestamp() + 7 days);
     }
 
@@ -127,17 +126,6 @@ contract DutchAuctionTest is Test {
         assertEq(auction.sellerBalance(), 0);
         console2.log("The balance of seller: ", seller.balance);
     }
-
-    // function test_revertwhenHackerBuy() public {
-    //     vm.deal(address(hacker), 1 ether);
-    //     vm.warp(auction.timestamp() + 6 days);
-    //     vm.startPrank(address(hacker));
-    //     vm.expectRevert();
-    //     auction.buyGood{value: 1 ether}();
-    //     vm.stopPrank();
-
-    //     console2.log("the balance of hacker is: ", address(hacker).balance);
-    // }
 
     function test_getPriceAfterDeadline() public {
         vm.warp(auction.timestamp() + 7 days + 1);

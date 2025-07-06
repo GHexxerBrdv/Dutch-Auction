@@ -15,7 +15,6 @@ contract AuctionFactory {
     mapping(uint256 id => DutchAuction auction) public auctions;
     mapping(address seller => uint256[] id) public sellerToAuction;
 
-    // mapping(uint256 id => address seller) public idToSeller;
     constructor() {
         owner = msg.sender;
     }
